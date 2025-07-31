@@ -25,6 +25,7 @@ const cardDisplayTypes = [
   "area",
   "combo",
   "pivot",
+  "sql_pivot",
   "smartscalar",
   "gauge",
   "progress",
