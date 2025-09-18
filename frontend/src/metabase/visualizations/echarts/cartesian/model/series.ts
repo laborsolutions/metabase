@@ -282,13 +282,25 @@ export const getDimensionModel = (
   rawSeries: RawSeries,
   cardsColumns: CartesianChartColumns[],
 ): DimensionModel => {
+  const firstDimension = cardsColumns[0]?.dimension;
+
+  // Safety check: if dimension column is not found, throw a more descriptive error
+  if (!firstDimension?.column) {
+    throw new Error(
+      `Dimension column not found. Expected column mapping failed for dimensions. ` +
+        `Available columns: ${rawSeries[0]?.data?.cols?.map((c) => c.name).join(", ") || "none"}`,
+    );
+  }
+
   return {
-    column: cardsColumns[0].dimension.column,
-    columnIndex: cardsColumns[0].dimension.index,
+    column: firstDimension.column,
+    columnIndex: firstDimension.index,
     columnByCardId: rawSeries.reduce(
       (columnByCardId, series, index) => {
         const cardColumns = cardsColumns[index];
-        columnByCardId[series.card.id] = cardColumns.dimension.column;
+        if (cardColumns?.dimension?.column) {
+          columnByCardId[series.card.id] = cardColumns.dimension.column;
+        }
         return columnByCardId;
       },
       {} as Record<CardId, DatasetColumn>,

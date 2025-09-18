@@ -35,6 +35,7 @@ export const cardDisplayTypes = [
   "scatter",
   "waterfall",
   "sankey",
+  "survey_question",
 ] as const;
 
 export const isCardDisplayType = (value: unknown): value is CardDisplayType =>
