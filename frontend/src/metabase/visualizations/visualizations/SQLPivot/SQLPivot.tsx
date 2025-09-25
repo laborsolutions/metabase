@@ -21,8 +21,11 @@ import type { ColumnSettingDefinition, VisualizationProps } from "../../types";
 import { SQL_PIVOT_SETTINGS } from "./settings";
 import type { SQLPivotSettings } from "./utils";
 import {
+  calculateDataRange,
   checkSQLPivotRenderable,
+  getColorForValue,
   isSQLPivotSensible,
+  parseCustomThresholds,
   transformSQLDataToPivot,
 } from "./utils";
 
@@ -219,9 +222,92 @@ export class SQLPivot extends Component<SQLPivotProps, SQLPivotState> {
       },
     ];
 
+    // Check if color coding is enabled
+    const enableColorCoding = (this.props.settings as any)[
+      "sqlpivot.enable_color_coding"
+    ];
+
+    // Get color configuration settings
+    const colorScheme =
+      (this.props.settings as any)["sqlpivot.color_scheme"] || "score";
+    const colorThresholdsStr =
+      (this.props.settings as any)["sqlpivot.color_thresholds"] || "78.6,92.9";
+    const rangeType =
+      (this.props.settings as any)["sqlpivot.color_range_type"] || "auto";
+    const customMinValue =
+      (this.props.settings as any)["sqlpivot.color_min_value"] || 0;
+    const customMaxValue =
+      (this.props.settings as any)["sqlpivot.color_max_value"] || 100;
+
+    // Calculate data range if using auto mode
+    const dataRange =
+      rangeType === "auto"
+        ? calculateDataRange(data.rows, 1)
+        : { min: customMinValue, max: customMaxValue };
+
+    // Parse custom thresholds if using custom scheme
+    const customThresholds =
+      colorScheme === "custom"
+        ? parseCustomThresholds(colorThresholdsStr)
+        : undefined;
+
+    // Provide a background color getter compatible with TableInteractive.
+    // Applies colors based on the selected scheme and configuration.
+    /* eslint-disable no-color-literals */
+    const styleGetter = enableColorCoding
+      ? (value: unknown, _rowIndex?: number, _colName?: string) => {
+          if (!_colName) {
+            return undefined;
+          }
+          const colIndex = data.cols.findIndex((c: any) => c.name === _colName);
+          if (colIndex <= 0) {
+            // Do not style the first column (row labels)
+            return undefined;
+          }
+
+          const numericValue =
+            typeof value === "number"
+              ? value
+              : typeof value === "string" && value.trim() !== ""
+                ? Number(value)
+                : NaN;
+
+          if (!Number.isFinite(numericValue)) {
+            return undefined;
+          }
+
+          // Normalize value to 0-100 range for consistent color application
+          const normalizedValue =
+            ((numericValue - dataRange.min) / (dataRange.max - dataRange.min)) *
+            100;
+
+          // Get color based on scheme and thresholds
+          const textColor = getColorForValue(
+            normalizedValue,
+            colorScheme,
+            customThresholds,
+            undefined, // We'll use the predefined colors from schemes
+          );
+
+          return textColor
+            ? ({ color: textColor } as React.CSSProperties)
+            : undefined;
+        }
+      : undefined;
+    /* eslint-enable no-color-literals */
+
+    const settingsWithBackground = {
+      ...this.props.settings,
+      // only colorize the number text (not cell background) if color coding is enabled
+      ...(enableColorCoding && { "table._cell_style_getter": styleGetter }),
+    } as typeof this.props.settings & {
+      [key: string]: unknown;
+    };
+
     return (
       <TableInteractive
         {...this.props}
+        settings={settingsWithBackground}
         series={transformedSeries}
         question={this.state.question}
         data={data}

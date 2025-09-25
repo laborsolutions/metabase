@@ -1,6 +1,7 @@
 import { t } from "ttag";
 import _ from "underscore";
 
+import { color } from "metabase/lib/colors";
 import { isNumber, isString } from "metabase-lib/v1/types/utils/isa";
 import type { DatasetColumn, DatasetData } from "metabase-types/api";
 
@@ -12,6 +13,12 @@ export interface SQLPivotSettings {
   "sqlpivot.show_row_aggregation"?: boolean;
   "sqlpivot.show_column_aggregation"?: boolean;
   "sqlpivot.hidden_column_labels"?: string[];
+  "sqlpivot.enable_color_coding"?: boolean;
+  "sqlpivot.color_scheme"?: "score" | "traffic" | "heat" | "custom";
+  "sqlpivot.color_thresholds"?: string;
+  "sqlpivot.color_range_type"?: "auto" | "custom";
+  "sqlpivot.color_min_value"?: number;
+  "sqlpivot.color_max_value"?: number;
 }
 
 export function isSQLPivotSensible(data: DatasetData): boolean {
@@ -47,6 +54,100 @@ export function getDefaultColumnDimension(
     return stringColumns[1].name;
   }
   return null; // Don't auto-select if only one string column (used for rows)
+}
+
+// Color scheme definitions for SQL Pivot visualization
+// Each scheme defines colors and thresholds for different value ranges
+export const COLOR_SCHEMES = {
+  score: {
+    colors: [color("warning"), color("success"), color("brand")], // yellow, green, blue
+    thresholds: [78.6, 92.9], // Values below 78.6 = yellow, 78.6-92.9 = green, above 92.9 = blue
+    name: "Score-based",
+  },
+  traffic: {
+    colors: [color("error"), color("warning"), color("success")], // red, yellow, green
+    thresholds: [70, 85], // Values below 70 = red, 70-85 = yellow, above 85 = green
+    name: "Traffic Light",
+  },
+  heat: {
+    colors: [color("error"), color("warning"), color("brand")], // red, yellow, blue
+    thresholds: [33, 66], // Values below 33 = red, 33-66 = yellow, above 66 = blue
+    name: "Heat Map",
+  },
+} as const;
+
+// Get color for a value based on scheme and thresholds
+export function getColorForValue(
+  value: number,
+  scheme: keyof typeof COLOR_SCHEMES | "custom",
+  customThresholds?: number[],
+  customColors?: string[],
+): string | undefined {
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+
+  let colors: readonly string[];
+  let thresholds: readonly number[];
+
+  if (scheme === "custom" && customColors && customThresholds) {
+    colors = customColors;
+    thresholds = customThresholds;
+  } else if (scheme !== "custom" && scheme in COLOR_SCHEMES) {
+    const schemeConfig = COLOR_SCHEMES[scheme];
+    colors = schemeConfig.colors;
+    thresholds = schemeConfig.thresholds;
+  } else {
+    // Fallback to score scheme
+    const schemeConfig = COLOR_SCHEMES.score;
+    colors = schemeConfig.colors;
+    thresholds = schemeConfig.thresholds;
+  }
+
+  // Find the appropriate color based on thresholds
+  for (let i = 0; i < thresholds.length; i++) {
+    if (value < thresholds[i]) {
+      return colors[i];
+    }
+  }
+  return colors[colors.length - 1]; // Use the last color for highest values
+}
+
+// Calculate data range for auto mode
+export function calculateDataRange(
+  rows: any[][],
+  startColIndex: number = 1,
+): { min: number; max: number } {
+  let min = Infinity;
+  let max = -Infinity;
+
+  for (const row of rows) {
+    for (let i = startColIndex; i < row.length; i++) {
+      const value = typeof row[i] === "number" ? row[i] : Number(row[i]);
+      if (Number.isFinite(value)) {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    }
+  }
+
+  return {
+    min: min === Infinity ? 0 : min,
+    max: max === -Infinity ? 100 : max,
+  };
+}
+
+// Parse custom thresholds from string
+export function parseCustomThresholds(thresholdsStr: string): number[] {
+  if (!thresholdsStr || typeof thresholdsStr !== "string") {
+    return [78.6, 92.9]; // Default fallback
+  }
+
+  return thresholdsStr
+    .split(",")
+    .map((t) => parseFloat(t.trim()))
+    .filter((t) => !isNaN(t))
+    .sort((a, b) => a - b);
 }
 
 export function getAllVisibleColumns(
