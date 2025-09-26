@@ -21,11 +21,8 @@ import type { ColumnSettingDefinition, VisualizationProps } from "../../types";
 import { SQL_PIVOT_SETTINGS } from "./settings";
 import type { SQLPivotSettings } from "./utils";
 import {
-  calculateDataRange,
   checkSQLPivotRenderable,
-  getColorForValue,
   isSQLPivotSensible,
-  parseCustomThresholds,
   transformSQLDataToPivot,
 } from "./utils";
 
@@ -227,32 +224,8 @@ export class SQLPivot extends Component<SQLPivotProps, SQLPivotState> {
       "sqlpivot.enable_color_coding"
     ];
 
-    // Get color configuration settings
-    const colorScheme =
-      (this.props.settings as any)["sqlpivot.color_scheme"] || "score";
-    const colorThresholdsStr =
-      (this.props.settings as any)["sqlpivot.color_thresholds"] || "78.6,92.9";
-    const rangeType =
-      (this.props.settings as any)["sqlpivot.color_range_type"] || "auto";
-    const customMinValue =
-      (this.props.settings as any)["sqlpivot.color_min_value"] || 0;
-    const customMaxValue =
-      (this.props.settings as any)["sqlpivot.color_max_value"] || 100;
-
-    // Calculate data range if using auto mode
-    const dataRange =
-      rangeType === "auto"
-        ? calculateDataRange(data.rows, 1)
-        : { min: customMinValue, max: customMaxValue };
-
-    // Parse custom thresholds if using custom scheme
-    const customThresholds =
-      colorScheme === "custom"
-        ? parseCustomThresholds(colorThresholdsStr)
-        : undefined;
-
     // Provide a background color getter compatible with TableInteractive.
-    // Applies colors based on the selected scheme and configuration.
+    // Applies discrete colors based on score thresholds only if enabled.
     /* eslint-disable no-color-literals */
     const styleGetter = enableColorCoding
       ? (value: unknown, _rowIndex?: number, _colName?: string) => {
@@ -276,22 +249,15 @@ export class SQLPivot extends Component<SQLPivotProps, SQLPivotState> {
             return undefined;
           }
 
-          // Normalize value to 0-100 range for consistent color application
-          const normalizedValue =
-            ((numericValue - dataRange.min) / (dataRange.max - dataRange.min)) *
-            100;
-
-          // Get color based on scheme and thresholds
-          const textColor = getColorForValue(
-            normalizedValue,
-            colorScheme,
-            customThresholds,
-            undefined, // We'll use the predefined colors from schemes
-          );
-
-          return textColor
-            ? ({ color: textColor } as React.CSSProperties)
-            : undefined;
+          let textColor: string | undefined;
+          if (numericValue >= 92.9) {
+            textColor = "#5D86DE"; // Blue
+          } else if (numericValue > 78.6) {
+            textColor = "#66B26B"; // Green
+          } else {
+            textColor = "#FAC849"; // Yellow
+          }
+          return { color: textColor } as React.CSSProperties;
         }
       : undefined;
     /* eslint-enable no-color-literals */
