@@ -202,13 +202,12 @@ export const SQL_PIVOT_SETTINGS = {
       return t`Display`;
     },
     get title() {
-      return t`Enable color coding`;
+      return t`Enable WOVO color coding`;
     },
     get description() {
       return t`Apply color coding to numeric values based on score thresholds (blue for ≥92.9, green for >78.6, yellow for others)`;
     },
     widget: "toggle",
-    inline: true,
     default: false,
   },
 };
