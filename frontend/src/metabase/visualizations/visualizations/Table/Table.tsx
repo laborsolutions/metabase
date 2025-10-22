@@ -236,60 +236,19 @@ class Table extends Component<TableProps, TableState> {
       },
       readDependencies: [DataGrid.COLUMN_FORMATTING_SETTING, "table.pivot"],
     },
-    "table.hidden_column_labels": {
+    "table.show_column_headers": {
       get section() {
         return t`Columns`;
       },
       get title() {
-        return t`Hide labels for columns`;
+        return t`Show column headers`;
       },
       get description() {
-        return t`Select columns for which you want to hide the column labels`;
+        return t`Toggle to show or hide the column header row`;
       },
-      widget: "multiselect",
-      default: [],
-      getProps: ([{ data }]: Series, settings: VisualizationSettings) => {
-        const isPivoted = _isPivoted([{ data } as any], settings);
-        let availableCols = data.cols;
-
-        // If pivoted, we need to get the transformed column structure
-        if (isPivoted) {
-          const pivotIndex = _.findIndex(
-            data.cols,
-            (col) => col.name === settings["table.pivot_column"],
-          );
-          const cellIndex = _.findIndex(
-            data.cols,
-            (col) => col.name === settings["table.cell_column"],
-          );
-          const normalIndex = _.findIndex(
-            data.cols,
-            (col, index) => index !== pivotIndex && index !== cellIndex,
-          );
-
-          // Get pivoted data to extract column names
-          const pivotedData = DataGrid.pivot(
-            data,
-            normalIndex,
-            pivotIndex,
-            cellIndex,
-          );
-          availableCols = pivotedData.cols;
-        }
-
-        return {
-          placeholder: t`Select columns to hide labels...`,
-          options: availableCols.map((col: DatasetColumn) => ({
-            label: col.display_name || col.name,
-            value: col.name,
-          })),
-        };
-      },
-      readDependencies: [
-        "table.pivot",
-        "table.pivot_column",
-        "table.cell_column",
-      ],
+      widget: "toggle",
+      inline: true,
+      default: true,
     },
   };
 
@@ -511,15 +470,7 @@ class Table extends Component<TableProps, TableState> {
       return null;
     }
     const { series, settings } = this.props;
-    const column = cols[columnIndex];
-
-    // Check if this column's label should be hidden
-    const hiddenColumnLabels = settings["table.hidden_column_labels"] || [];
-    if (hiddenColumnLabels.includes(column.name)) {
-      return "";
-    }
-
-    return getTitleForColumn(column, series, settings);
+    return getTitleForColumn(cols[columnIndex], series, settings);
   };
 
   getColumnSortDirection = (columnIndex: number) => {
@@ -603,6 +554,7 @@ class Table extends Component<TableProps, TableState> {
         question={this.state.question}
         data={data}
         isPivoted={isPivoted}
+        showColumnHeaders={settings["table.show_column_headers"] !== false}
         getColumnTitle={this.getColumnTitle}
         getColumnSortDirection={this.getColumnSortDirection}
       />
