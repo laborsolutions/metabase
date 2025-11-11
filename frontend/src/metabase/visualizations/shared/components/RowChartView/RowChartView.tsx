@@ -1,6 +1,6 @@
 import type { AxisScale } from "@visx/axis";
 import { AxisBottom, AxisLeft } from "@visx/axis";
-import { GridColumns } from "@visx/grid";
+import { GridColumns, GridRows } from "@visx/grid";
 import { Group } from "@visx/group";
 import type { NumberLike, StringLike } from "@visx/scale";
 import { scaleBand } from "@visx/scale";
@@ -43,6 +43,8 @@ export interface RowChartViewProps<TDatum> {
   yLabel?: string | null;
   hasXAxis?: boolean;
   hasYAxis?: boolean;
+  showXGridLines?: boolean;
+  showYGridLines?: boolean;
   isStacked?: boolean;
   style?: React.CSSProperties;
   hoveredData?: HoveredData | null;
@@ -60,6 +62,7 @@ const RowChartView = <TDatum,>({
   width,
   height,
   innerHeight,
+  innerWidth,
   xScale,
   yScale,
   seriesData,
@@ -75,6 +78,8 @@ const RowChartView = <TDatum,>({
   xLabel,
   hasXAxis = true,
   hasYAxis = true,
+  showXGridLines,
+  showYGridLines,
   isStacked,
   style,
   hoveredData,
@@ -93,12 +98,22 @@ const RowChartView = <TDatum,>({
   return (
     <svg width={width ?? undefined} height={height ?? undefined} style={style}>
       <Group top={margin.top} left={margin.left}>
-        <GridColumns
-          scale={xScale as AxisScale<number>}
-          height={innerHeight}
-          stroke={theme.grid.color}
-          tickValues={xTicks}
-        />
+        {showXGridLines && (
+          <GridColumns
+            scale={xScale as AxisScale<number>}
+            height={innerHeight}
+            stroke={theme.grid.color}
+            tickValues={xTicks}
+          />
+        )}
+
+        {showYGridLines && (
+          <GridRows
+            scale={yScale}
+            width={innerWidth}
+            stroke={theme.grid.color}
+          />
+        )}
 
         {seriesData.map((series, seriesIndex) => {
           return series.bars.map((bar) => {
