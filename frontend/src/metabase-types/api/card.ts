@@ -241,6 +241,9 @@ export type VisualizationSettings = {
 
   // Table
   "table.columns"?: TableColumnOrderSetting[];
+  "table.show_column_headers"?: boolean;
+  "table.show_row_borders"?: boolean;
+  "table.show_last_row_border"?: boolean;
   // Keys here can be modern (returned by `getColumnKey`) or legacy (`getLegacyColumnKey`).
   // Use `getColumnSettings` which checks for both keys.
   column_settings?: Record<string, ColumnSettings>;
