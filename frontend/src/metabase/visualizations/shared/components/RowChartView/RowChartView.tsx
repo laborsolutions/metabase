@@ -14,8 +14,10 @@ import type { Margin } from "metabase/visualizations/shared/types/layout";
 
 import type { SeriesInfo } from "../../types/data";
 import type { BarData, RowChartTheme, SeriesData } from "../RowChart/types";
+import { MAX_Y_TICK_WIDTH } from "../RowChart/utils/layout";
 import { VerticalGoalLine } from "../VerticalGoalLine/VerticalGoalLine";
 
+import { WrappedYAxisTick } from "./components/WrappedYAxisTick";
 import { DATA_LABEL_OFFSET } from "./constants";
 import { getDataLabel } from "./utils/data-labels";
 
@@ -226,14 +228,18 @@ const RowChartView = <TDatum,>({
           scale={yScale}
           stroke={theme.axis.color}
           tickStroke={theme.axis.color}
-          tickLabelProps={() => ({
-            fill: theme.axis.ticks.color,
-            fontFamily: theme.dataLabels.family,
-            fontSize: theme.axis.ticks.size,
-            fontWeight: theme.axis.ticks.weight,
-            textAnchor: "end",
-            dy: "0.33em",
-          })}
+          tickComponent={(tickProps) => (
+            <WrappedYAxisTick
+              {...tickProps}
+              maxWidth={MAX_Y_TICK_WIDTH}
+              fill={theme.axis.ticks.color}
+              fontFamily={theme.dataLabels.family}
+              fontSize={theme.axis.ticks.size}
+              fontWeight={theme.axis.ticks.weight}
+              textAnchor="end"
+              dy="0.33em"
+            />
+          )}
         />
         <AxisBottom
           label={xLabel ?? ""}
