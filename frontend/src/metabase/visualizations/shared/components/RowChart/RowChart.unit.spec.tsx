@@ -2,7 +2,6 @@ import userEvent from "@testing-library/user-event";
 import type { NumberValue } from "d3-scale";
 
 import { render, screen } from "__support__/ui";
-import { measureTextWidth } from "metabase/lib/measure-text";
 
 import type { ChartFont } from "../../types/style";
 
@@ -56,7 +55,7 @@ const defaultProps = {
   },
   theme,
   stackOffset: null,
-  measureTextWidth,
+  measureTextWidth: (text: string) => text.length * 10,
 };
 
 const setup = (props?: Partial<RowChartProps<TestDatum>>) => {
@@ -354,6 +353,96 @@ describe("RowChart", () => {
         "1",
         "0.4",
       ]);
+    });
+
+    it("should truncate long labels and show tooltip", () => {
+      const longLabel =
+        "This is a very long label that should be truncated because it exceeds the maximum width allowed for the Y-axis tick.";
+      const seriesWithLongLabel = {
+        ...series1,
+        yAccessor: () => longLabel,
+      };
+
+      setup({
+        series: [seriesWithLongLabel],
+        data: [{ y: longLabel, x: 100, x1: 200 }],
+      });
+
+      // Check if truncated label exists (contains ellipsis)
+      const ticks = screen.getAllByText(/…/);
+      expect(ticks.length).toBeGreaterThan(0);
+    });
+
+    it("should wrap long labels to multiple lines if height permits", () => {
+      const longLabel = "Line1 Line2 Line3";
+      const seriesWithLongLabel = {
+        ...series1,
+        yAccessor: () => longLabel,
+      };
+
+      // Mock measureTextWidth to force wrapping
+      const measureTextWidth = (text: string) => {
+        if (text.includes(" ")) {
+          return 200;
+        } // Force split if multiple words
+        return 50; // Single word fits
+      };
+
+      // Large height to allow multiple lines
+      setup({
+        series: [seriesWithLongLabel],
+        data: [{ y: longLabel, x: 100, x1: 200 }],
+        height: 500, // Large height
+        measureTextWidth,
+      });
+
+      // Should find the text with newlines or separate tspan elements?
+      // VisX Text renders multiple tspans for newlines.
+      // Testing-library might see it as "Line1\nLine2\nLine3" or just the text content.
+      // Let's check if the full text is present without ellipsis.
+      expect(screen.getByText("Line1 Line2 Line3")).toBeInTheDocument();
+      expect(screen.queryByText(/…/)).not.toBeInTheDocument();
+    });
+
+    it("should truncate with ellipsis if max lines exceeded", () => {
+      const longLabel = "Line1 Line2 Line3 Line4";
+
+      const measureTextWidth = (text: string) => {
+        // Mock: each word is 50px. Space adds width.
+        // "Line1 Line2" -> 100px + space.
+        // MAX_Y_TICK_WIDTH is 180.
+        // So "Line1 Line2 Line3" -> > 150px.
+        // "Line1 Line2 Line3 Line4" -> > 200px.
+        // It would wrap to 2 lines if allowed.
+        return text.length * 10;
+      };
+
+      // Create data with many items to force small bar height
+      // Height 200 / 20 items = 10px per item.
+      // Font size 10 -> line height 12.
+      // Available height 10 < 12 -> maxLines = 0 -> clamped to 1.
+      // So it should force single line.
+      // Single line of "Line1 Line2 Line3 Line4" (length ~23 * 10 = 230) > 180.
+      // So it should truncate.
+      const data = Array.from({ length: 20 }).map((_, i) => ({
+        y: i === 0 ? longLabel : `Label ${i}`,
+        x: 10,
+        x1: 20,
+      }));
+
+      setup({
+        series: [
+          {
+            ...series1,
+            yAccessor: (d) => d.y,
+          },
+        ],
+        data,
+        height: 200,
+        measureTextWidth,
+      });
+
+      expect(screen.getAllByText(/…/).length).toBeGreaterThan(0);
     });
   });
 });

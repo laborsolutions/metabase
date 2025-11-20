@@ -21,13 +21,15 @@ export const getMaxWidth = (
   ticksFont: ChartFont,
   measureTextWidth: TextWidthMeasurer,
 ): number => {
-  return Math.max(
-    ...formattedYTicks.map((tick) =>
-      measureTextWidth(tick, {
-        size: `${ticksFont.size}px`,
-        family: "Lato",
-        weight: String(ticksFont.weight ?? 400),
-      }),
+  return Math.min(
+    Math.max(
+      ...formattedYTicks.map((tick) =>
+        measureTextWidth(tick, {
+          size: `${ticksFont.size}px`,
+          family: "Lato",
+          weight: String(ticksFont.weight ?? 400),
+        }),
+      ),
     ),
     MAX_Y_TICK_WIDTH,
   );
