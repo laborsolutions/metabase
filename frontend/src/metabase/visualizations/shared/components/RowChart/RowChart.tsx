@@ -279,6 +279,7 @@ export const RowChart = <TDatum,>({
       showYGridLines={showYGridLines}
       onClick={onClick}
       onHover={onHover}
+      measureTextWidth={measureTextWidth}
     />
   );
 };

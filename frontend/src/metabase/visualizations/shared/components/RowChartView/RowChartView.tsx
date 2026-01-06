@@ -11,6 +11,7 @@ import * as React from "react";
 
 import type { HoveredData } from "metabase/visualizations/shared/types/events";
 import type { Margin } from "metabase/visualizations/shared/types/layout";
+import type { TextWidthMeasurer } from "metabase/visualizations/shared/types/measure-text";
 
 import type { SeriesInfo } from "../../types/data";
 import type { BarData, RowChartTheme, SeriesData } from "../RowChart/types";
@@ -58,6 +59,7 @@ export interface RowChartViewProps<TDatum> {
     event: React.MouseEvent<Element>,
     bar: BarData<TDatum, SeriesInfo>,
   ) => void;
+  measureTextWidth: TextWidthMeasurer;
 }
 
 const RowChartView = <TDatum,>({
@@ -87,6 +89,7 @@ const RowChartView = <TDatum,>({
   hoveredData,
   onHover,
   onClick,
+  measureTextWidth,
 }: RowChartViewProps<TDatum>) => {
   const innerBarScale = isStacked
     ? null
@@ -232,12 +235,14 @@ const RowChartView = <TDatum,>({
             <WrappedYAxisTick
               {...tickProps}
               maxWidth={MAX_Y_TICK_WIDTH}
+              maxHeight={yScale.step()}
               fill={theme.axis.ticks.color}
               fontFamily={theme.dataLabels.family}
               fontSize={theme.axis.ticks.size}
               fontWeight={theme.axis.ticks.weight}
               textAnchor="end"
               dy="0.33em"
+              measureTextWidth={measureTextWidth}
             />
           )}
         />
