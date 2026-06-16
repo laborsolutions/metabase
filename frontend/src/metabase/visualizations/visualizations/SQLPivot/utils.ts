@@ -1,6 +1,7 @@
 import { t } from "ttag";
 import _ from "underscore";
 
+import { displayNameForColumn } from "metabase/lib/formatting";
 import { isNumber, isString } from "metabase-lib/v1/types/utils/isa";
 import type { DatasetColumn, DatasetData } from "metabase-types/api";
 
@@ -329,7 +330,7 @@ function transformToStandardPivot(
     {
       ...primaryRowColumn,
       name: "row_hierarchy",
-      display_name: "Category",
+      display_name: displayNameForColumn(primaryRowColumn),
     },
     ...valueColumns,
   ];
@@ -682,7 +683,7 @@ function transformToMatrixPivot(
     {
       ...primaryRowColumn,
       name: "row_hierarchy",
-      display_name: "Category",
+      display_name: displayNameForColumn(primaryRowColumn),
     },
   ];
   if (showRowAggregation && rowAggregationPosition === "first") {
